@@ -9,13 +9,14 @@ final int DRAWMODE_FAST = 1;
 final int DRAWMODE_NICE = 2;
 int drawMode = DRAWMODE_NICE;
 
-//boolean tmoved = false;
 float touchTime;
-final float TAP_DURATION = 500;
+final float TAP_DURATION = 250;
 
 final int SAT = 70;
 final int VALUE = 80;
 int hue;
+
+float px, py;
 
 void setup () {
   //size(500, 500, P2D);
@@ -37,7 +38,7 @@ void mouseClicked() {
 
 void mouseDragged() 
 {
-  drag();
+  drag(pmouseX - mouseX, pmouseY - mouseY);
 }
 
 void mouseReleased () {
@@ -45,20 +46,23 @@ void mouseReleased () {
 }
 
 void touchStarted() {
-  //init();
   touchTime = millis();
+  px = touches[0].x;
+  py = touches[0].y;
 }
 
 void touchMoved() {
-  drag();
+  float dx = px - touches[0].x;
+  float dy = py - touches[0].y;
+  px = touches[0].x;
+  py = touches[0].y;
+  drag(dx, dy);
 }
 
 void touchEnded() {
-  //release();
-
-  if (millis() - touchTime > TAP_DURATION) {
+  if (millis() - touchTime > TAP_DURATION) { // long touch is a drag
     release();
-  } else {
+  } else { // short touch is a tap
     init();
   }
 }
@@ -87,7 +91,7 @@ void init () {
   for (int i = 0; i < walkers.length; i++) walkers[i].init();
 }
 
-void drag () {
+void drag (float dx, float dy) {
   drawMode = DRAWMODE_FAST;
 
   c.beginDraw();
@@ -97,8 +101,8 @@ void drag () {
 
   for (int i = 0; i < walkers.length; i++) {
     walkers[i].init();
-    walkers[i].xoff += pmouseX - mouseX;
-    walkers[i].yoff += pmouseY - mouseY;
+    walkers[i].xoff += dx;
+    walkers[i].yoff += dy;
   }
   c.endDraw();
 }
@@ -115,6 +119,8 @@ void release () {
 
 void draw () {
 
+  // DRAWMODE_NICE builds up high quality image over many frames
+  // DRAWMODE_FAST make a new, quick-and-dirty image every frame
   int its = drawMode == DRAWMODE_NICE ? 1 : 100;
   int ws = drawMode == DRAWMODE_NICE ? walkers.length : 100;
 
