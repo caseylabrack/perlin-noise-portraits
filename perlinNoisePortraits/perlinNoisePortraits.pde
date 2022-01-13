@@ -18,6 +18,9 @@ int hue;
 
 float px, py;
 
+PGraphics flash;
+float alfa = 0;
+
 void setup () {
   //size(500, 500, P2D);
   fullScreen(P2D);
@@ -25,10 +28,18 @@ void setup () {
   for (int i = 0; i < walkers.length; i++) walkers[i] = new NoiseWalker(width, height, 1, 5);
 
   c = createGraphics(width, height, P2D);
+  c.smooth(8);
   c.beginDraw();
   c.colorMode(HSB, 360, 100, 100, 1);
   c.noFill();
   c.endDraw();
+
+  flash = createGraphics(width, height);
+  flash.beginDraw();
+  flash.noStroke();
+  flash.fill(255);
+  flash.rect(0, 0, width, height);
+  flash.endDraw();
   init();
 }
 
@@ -45,27 +56,27 @@ void mouseReleased () {
   release();
 }
 
-void touchStarted() {
-  touchTime = millis();
-  px = touches[0].x;
-  py = touches[0].y;
-}
+//void touchStarted() {
+//  touchTime = millis();
+//  px = touches[0].x;
+//  py = touches[0].y;
+//}
 
-void touchMoved() {
-  float dx = px - touches[0].x;
-  float dy = py - touches[0].y;
-  px = touches[0].x;
-  py = touches[0].y;
-  drag(dx, dy);
-}
+//void touchMoved() {
+//  float dx = px - touches[0].x;
+//  float dy = py - touches[0].y;
+//  px = touches[0].x;
+//  py = touches[0].y;
+//  drag(dx, dy);
+//}
 
-void touchEnded() {
-  if (millis() - touchTime > TAP_DURATION) { // long touch is a drag
-    release();
-  } else { // short touch is a tap
-    init();
-  }
-}
+//void touchEnded() {
+//  if (millis() - touchTime > TAP_DURATION) { // long touch is a drag
+//    release();
+//  } else { // short touch is a tap
+//    init();
+//  }
+//}
 
 void init () {
   noiseSeed((int)random(1e6));
@@ -117,6 +128,12 @@ void release () {
   for (int i = 0; i < walkers.length; i++) walkers[i].init();
 }
 
+void keyReleased() {
+
+  saveFrame("noise" + String.join("-", ""+month(), ""+day(), ""+hour(), ""+minute(), ""+second()) + ".png");
+  alfa = 255;
+}
+
 void draw () {
 
   // DRAWMODE_NICE builds up high quality image over many frames
@@ -135,4 +152,10 @@ void draw () {
   c.endDraw();
 
   image(c, 0, 0);
+
+  if (alfa > 1) alfa = alfa * .95; // easy non-linear interpolation toward zero
+  pushStyle();
+  tint(255, alfa);
+  image(flash, 0, 0);
+  popStyle();
 }
