@@ -23,7 +23,13 @@ class NoiseWalker {
   void update () {
     if (active == false) return;
 
-    angle = noise((x + xoff)/noiseScale, (y + yoff)/noiseScale) * noiseStrength * TWO_PI;
+    PVector ctx = new PVector(width/2, height/2);
+    ctx.x = 0;
+    ctx.y = height/2;
+    float str = map(dist(x,y,ctx.x,ctx.y), 0, width/2, .5, 50);
+    //str = .5;
+
+    angle = noise((x + xoff)/noiseScale, (y + yoff)/noiseScale) * str * TWO_PI;
     px = x;
     py = y;
 
