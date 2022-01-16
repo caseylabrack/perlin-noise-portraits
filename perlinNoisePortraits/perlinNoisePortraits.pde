@@ -1,4 +1,5 @@
-NoiseWalker[] walkers = new NoiseWalker[10000];
+final int NUM_PARTICLES = 10000;
+Particle[] particles = new Particle[NUM_PARTICLES];
 PGraphics c;
 float noiseScale;
 float noiseStrength;
@@ -16,16 +17,22 @@ final int SAT = 70;
 final int VALUE = 80;
 int hue;
 
-float px, py;
+float xoff = 0;
+float yoff = 0;
 
 PGraphics flash;
 float alfa = 0;
 
+class Particle {
+  float x, y, step, px, py, xoff, yoff;
+  boolean active;
+}
+
 void setup () {
   //size(500, 500, P2D);
   fullScreen(P2D);
-  //pixelDensity(displayDensity());
-  for (int i = 0; i < walkers.length; i++) walkers[i] = new NoiseWalker(width, height, 1, 5);
+  for (int i = 0; i < NUM_PARTICLES; i++) particles[i] = new Particle();
+  resetParticles();
 
   c = createGraphics(width, height, P2D);
   c.smooth(8);
@@ -99,7 +106,7 @@ void init () {
   }
   c.endDraw();
 
-  for (int i = 0; i < walkers.length; i++) walkers[i].init();
+  resetParticles();
 }
 
 void drag (float dx, float dy) {
@@ -109,13 +116,11 @@ void drag (float dx, float dy) {
   c.blendMode(BLEND);
   c.background(0, 0, 100, 1);
   c.stroke(hue, SAT, VALUE, 1);
-
-  for (int i = 0; i < walkers.length; i++) {
-    walkers[i].init();
-    walkers[i].xoff += dx;
-    walkers[i].yoff += dy;
-  }
   c.endDraw();
+
+  resetParticles();
+  xoff += dx;
+  yoff += dy;
 }
 
 void release () {
@@ -125,7 +130,7 @@ void release () {
   c.stroke(hue, SAT, VALUE, blendSetting == ADD ? .25 : .1);
   c.blendMode(blendSetting);
   c.endDraw();
-  for (int i = 0; i < walkers.length; i++) walkers[i].init();
+  resetParticles();
 }
 
 void keyReleased() {
@@ -134,20 +139,67 @@ void keyReleased() {
   alfa = 255;
 }
 
+void resetParticles() {
+
+  for (Particle p : particles) {
+    p.x = random(width);
+    p.y = random(height);
+    p.px = p.x;
+    p.py = p.y;
+    p.step = random(1, 5);
+    p.xoff = 0;
+    p.yoff = 0;
+    p.active = true;
+  }
+}
+
 void draw () {
 
-  // DRAWMODE_NICE builds up high quality image over many frames
-  // DRAWMODE_FAST make a new, quick-and-dirty image every frame
-  int its = drawMode == DRAWMODE_NICE ? 1 : 100;
-  int ws = drawMode == DRAWMODE_NICE ? walkers.length : 100;
-
   c.beginDraw();
-  for (int j = 0; j < its; j++) {
-    for (int i = 0; i < ws; i++) {
-      walkers[i].update();
-      if (walkers[i].active==false) continue;
-      c.line(walkers[i].x, walkers[i].y, walkers[i].px, walkers[i].py);
+  switch(drawMode) {
+
+  case DRAWMODE_NICE: // all particles take one step per frame. image builds up over a few seconds.
+    for (Particle p : particles) {
+      if (p.active == false) continue;
+
+      float angle = noise((p.x + xoff)/noiseScale, (p.y + yoff)/noiseScale) * noiseStrength * TWO_PI;
+      p.px = p.x;
+      p.py = p.y;
+
+      p.x += cos(angle) * p.step;
+      p.y += sin(angle) * p.step;
+
+      if (p.x < 0 || p.x > width || p.y < 0 || p.y > height) {
+        p.active = false;
+      }
+
+      c.line(p.x, p.y, p.px, p.py);
     }
+    break;
+
+  case DRAWMODE_FAST: // a few particles undergo many iterations in one frame. gives an instant preview of the image.
+    for (int iterations = 0; iterations < 100; iterations++) {
+      for (int sample = 0; sample < 100; sample++) {
+
+        Particle p = particles[sample];
+
+        if (p.active == false) continue;
+
+        float angle = noise((p.x + xoff)/noiseScale, (p.y + yoff)/noiseScale) * noiseStrength * TWO_PI;
+        p.px = p.x;
+        p.py = p.y;
+
+        p.x += cos(angle) * p.step;
+        p.y += sin(angle) * p.step;
+
+        if (p.x < 0 || p.x > width || p.y < 0 || p.y > height) {
+          p.active = false;
+        }
+
+        c.line(p.x, p.y, p.px, p.py);
+      }
+    }
+    break;
   }
   c.endDraw();
 
