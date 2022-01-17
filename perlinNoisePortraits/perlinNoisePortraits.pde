@@ -2,7 +2,8 @@ final int NUM_PARTICLES = 10000;
 Particle[] particles = new Particle[NUM_PARTICLES];
 PGraphics c;
 float noiseScale;
-float noiseStrength;
+//float noiseStrength;
+float noiseStrengthMod;
 int blendSetting;
 final int BLEND_ADD = 1;
 final int BLEND_MULT = 2;
@@ -24,7 +25,7 @@ PGraphics flash;
 float alfa = 0;
 
 class Particle {
-  float x, y, step, px, py, xoff, yoff;
+  float x, y, step, px, py;
   boolean active;
 }
 
@@ -88,7 +89,8 @@ void mouseReleased () {
 void init () {
   noiseSeed((int)random(1e6));
   noiseScale = random(100, 500);
-  noiseStrength = random(1, 10);
+  //noiseStrength = random(1, 10);
+  noiseStrengthMod = random(.0001, 2);
 
   hue = int(random(360));
 
@@ -147,8 +149,6 @@ void resetParticles() {
     p.px = p.x;
     p.py = p.y;
     p.step = random(1, 5);
-    p.xoff = 0;
-    p.yoff = 0;
     p.active = true;
   }
 }
@@ -158,9 +158,11 @@ void draw () {
   c.beginDraw();
   switch(drawMode) {
 
-  case DRAWMODE_NICE: // all particles take one step per frame. image builds up over a few seconds.
+  case DRAWMODE_NICE: // all particles take one step per frame. final image builds up iteratively.
     for (Particle p : particles) {
       if (p.active == false) continue;
+
+      float noiseStrength = map(noise(map(p.x, 0, width, 0, 1), map(p.y, 0, height, 0, 1)), 0, 1, .5, 50) * noiseStrengthMod;
 
       float angle = noise((p.x + xoff)/noiseScale, (p.y + yoff)/noiseScale) * noiseStrength * TWO_PI;
       p.px = p.x;
@@ -179,11 +181,13 @@ void draw () {
 
   case DRAWMODE_FAST: // a few particles undergo many iterations in one frame. gives an instant preview of the image.
     for (int iterations = 0; iterations < 100; iterations++) {
-      for (int sample = 0; sample < 100; sample++) {
+      for (int sample = 0; sample < 250; sample++) {
 
         Particle p = particles[sample];
 
         if (p.active == false) continue;
+
+        float noiseStrength = map(noise(map(p.x, 0, width, 0, 1), map(p.y, 0, height, 0, 1)), 0, 1, .5, 50) * noiseStrengthMod;
 
         float angle = noise((p.x + xoff)/noiseScale, (p.y + yoff)/noiseScale) * noiseStrength * TWO_PI;
         p.px = p.x;
