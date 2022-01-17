@@ -2,7 +2,6 @@ final int NUM_PARTICLES = 10000;
 Particle[] particles = new Particle[NUM_PARTICLES];
 PGraphics c;
 float noiseScale;
-//float noiseStrength;
 float noiseStrengthMod;
 int blendSetting;
 final int BLEND_ADD = 1;
@@ -20,6 +19,7 @@ int hue;
 
 float xoff = 0;
 float yoff = 0;
+float cx, cy, rangex, rangey;
 
 PGraphics flash;
 float alfa = 0;
@@ -33,7 +33,6 @@ void setup () {
   //size(500, 500, P2D);
   fullScreen(P2D);
   for (int i = 0; i < NUM_PARTICLES; i++) particles[i] = new Particle();
-  resetParticles();
 
   c = createGraphics(width, height, P2D);
   c.smooth(8);
@@ -89,8 +88,19 @@ void mouseReleased () {
 void init () {
   noiseSeed((int)random(1e6));
   noiseScale = random(100, 500);
-  //noiseStrength = random(1, 10);
   noiseStrengthMod = random(.0001, 2);
+
+  // for panning around inside the noise space
+  xoff = 0;
+  yoff = 0;
+  // all particles spawn around this point
+  cx = random(width);
+  cy = random(height);
+  // scales the gauss function
+  rangex = random(width);
+  rangey = random(height);
+
+  resetParticles();
 
   hue = int(random(360));
 
@@ -107,8 +117,17 @@ void init () {
     c.stroke(hue, SAT, VALUE, .1);
   }
   c.endDraw();
+}
 
-  resetParticles();
+void resetParticles() {
+    for (Particle p : particles) {
+    p.x = randomGaussian() * rangex + cx;
+    p.y = randomGaussian() * rangey + cy;
+    p.px = p.x;
+    p.py = p.y;
+    p.step = random(1, 5);
+    p.active = true;
+  }
 }
 
 void drag (float dx, float dy) {
@@ -120,9 +139,10 @@ void drag (float dx, float dy) {
   c.stroke(hue, SAT, VALUE, 1);
   c.endDraw();
 
-  resetParticles();
   xoff += dx;
   yoff += dy;
+  
+  resetParticles();
 }
 
 void release () {
@@ -132,25 +152,14 @@ void release () {
   c.stroke(hue, SAT, VALUE, blendSetting == ADD ? .25 : .1);
   c.blendMode(blendSetting);
   c.endDraw();
+  
   resetParticles();
 }
 
 void keyReleased() {
 
-  saveFrame("noise" + String.join("-", ""+month(), ""+day(), ""+hour(), ""+minute(), ""+second()) + ".png");
+  saveFrame("noise_" + String.join("-", ""+year(), ""+month(), ""+day(), ""+hour(), ""+minute(), ""+second()) + ".png");
   alfa = 255;
-}
-
-void resetParticles() {
-
-  for (Particle p : particles) {
-    p.x = random(width);
-    p.y = random(height);
-    p.px = p.x;
-    p.py = p.y;
-    p.step = random(1, 5);
-    p.active = true;
-  }
 }
 
 void draw () {
@@ -158,7 +167,7 @@ void draw () {
   c.beginDraw();
   switch(drawMode) {
 
-  case DRAWMODE_NICE: // all particles take one step per frame. final image builds up iteratively.
+  case DRAWMODE_NICE: // all particles take one step per frame. high quality final image builds up iteratively.
     for (Particle p : particles) {
       if (p.active == false) continue;
 
@@ -171,9 +180,7 @@ void draw () {
       p.x += cos(angle) * p.step;
       p.y += sin(angle) * p.step;
 
-      if (p.x < 0 || p.x > width || p.y < 0 || p.y > height) {
-        p.active = false;
-      }
+      if (p.x < 0 || p.x > width || p.y < 0 || p.y > height) p.active = false;
 
       c.line(p.x, p.y, p.px, p.py);
     }
@@ -185,8 +192,6 @@ void draw () {
 
         Particle p = particles[sample];
 
-        if (p.active == false) continue;
-
         float noiseStrength = map(noise(map(p.x, 0, width, 0, 1), map(p.y, 0, height, 0, 1)), 0, 1, .5, 50) * noiseStrengthMod;
 
         float angle = noise((p.x + xoff)/noiseScale, (p.y + yoff)/noiseScale) * noiseStrength * TWO_PI;
@@ -197,7 +202,10 @@ void draw () {
         p.y += sin(angle) * p.step;
 
         if (p.x < 0 || p.x > width || p.y < 0 || p.y > height) {
-          p.active = false;
+          p.x = randomGaussian() * rangex + cx;
+          p.y = randomGaussian() * rangey + cy;
+          p.px = p.x;
+          p.py = p.y;
         }
 
         c.line(p.x, p.y, p.px, p.py);
@@ -209,6 +217,7 @@ void draw () {
 
   image(c, 0, 0);
 
+  // camera flash effect confirms you saved a frame
   if (alfa > 1) alfa = alfa * .95; // easy non-linear interpolation toward zero
   pushStyle();
   tint(255, alfa);
